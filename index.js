@@ -179,24 +179,37 @@ async function getSurahs() {
 // Get specific ayah with matching text and audio
 async function getAyah(surah, ayah, reciter, translation) {
   try {
-    // Fetch Arabic text (quran-simple = no diacritics, matches audio)
-    // Fetch translation
-    const [arabicRes, transRes] = await Promise.all([
-      fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/quran-simple`),
-      fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/${translation}`)
-    ]);
-
-    const arabicData = await arabicRes.json();
-    const transData = await transRes.json();
-
     // Calculate global verse number for audio
     const globalVerseNumber = getGlobalVerseNumber(parseInt(surah), parseInt(ayah));
+    
+    // Fetch Arabic text (quran-simple = no diacritics, matches audio)
+    const arabicRes = await fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/quran-simple`);
+    const arabicData = await arabicRes.json();
+    
+    // Fetch translation
+    const transRes = await fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/${translation}`);
+    const transData = await transRes.json();
+
+    // Handle different API response formats
+    let arabicText = '';
+    if (arabicData.data) {
+      arabicText = arabicData.data.text || '';
+    } else if (arabicData.data?.surah?.ayahs) {
+      // Full surah response format
+      const targetAyah = arabicData.data.surah.ayahs.find(a => a.numberInSurah === parseInt(ayah));
+      if (targetAyah) arabicText = targetAyah.text || '';
+    }
+    
+    let translationText = '';
+    if (transData.data) {
+      translationText = transData.data.text || '';
+    }
 
     const result = {
       surah: parseInt(surah),
       ayah: parseInt(ayah),
-      arabic: arabicData.data?.text || '',
-      translation: transData.data?.text || '',
+      arabic: arabicText,
+      translation: translationText,
       audioUrl: `https://cdn.islamic.network/quran/audio/128/${reciter}/${globalVerseNumber}.mp3`
     };
 
@@ -204,7 +217,7 @@ async function getAyah(surah, ayah, reciter, translation) {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Failed to fetch ayah' }), {
+    return new Response(JSON.stringify({ error: 'Failed to fetch ayah', details: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
