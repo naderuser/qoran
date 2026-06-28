@@ -206,10 +206,35 @@ async function getAyah(surah, ayah, reciter, translation) {
 
 // Redirect to audio CDN
 function getAudioRedirect(surah, ayah, reciter) {
-  const paddedAyah = String(ayah).padStart(3, '0');
-  const audioUrl = `https://cdn.islamic.network/quran/audio/128/${reciter}/${surah}${paddedAyah}.mp3`;
+  // Calculate global verse number for Islamic Network CDN
+  const globalVerseNumber = getGlobalVerseNumber(parseInt(surah), parseInt(ayah));
+  const audioUrl = `https://cdn.islamic.network/quran/audio/128/${reciter}/${globalVerseNumber}.mp3`;
   
   return Response.redirect(audioUrl, 302);
+}
+
+// Calculate global verse number (cumulative) for audio API
+function getGlobalVerseNumber(surah, ayah) {
+  const ayahCounts = [
+    0, 7, 286, 200, 176, 120, 165, 206, 75, 129, 109,
+    123, 111, 43, 52, 99, 128, 111, 110, 98, 135,
+    112, 78, 118, 64, 77, 227, 93, 88, 69, 60,
+    34, 30, 73, 54, 45, 83, 182, 88, 75, 85,
+    54, 53, 89, 59, 37, 35, 38, 29, 18, 45,
+    60, 49, 62, 55, 78, 96, 29, 22, 24, 13,
+    14, 11, 11, 18, 12, 12, 30, 52, 52, 44,
+    28, 28, 20, 56, 40, 31, 50, 40, 46, 42,
+    29, 19, 5, 8, 8, 11, 8, 11, 11, 8,
+    3, 9, 8, 3, 8, 8, 3, 3, 8, 8,
+    3, 3, 3, 5, 5, 3, 4, 5, 5, 1,
+    5, 4, 3, 6, 3, 3, 7, 3, 6, 3
+  ];
+  
+  let total = 0;
+  for (let i = 0; i < surah - 1; i++) {
+    total += ayahCounts[i];
+  }
+  return total + ayah;
 }
 
 // CORS headers helper
@@ -805,6 +830,29 @@ function getHTML() {
     <div class="toast" id="toast"></div>
     
     <script>
+        // Calculate global verse number for Islamic Network CDN
+        function getGlobalVerseNumber(surah, ayah) {
+            const ayahCounts = [
+                0, 7, 286, 200, 176, 120, 165, 206, 75, 129, 109,
+                123, 111, 43, 52, 99, 128, 111, 110, 98, 135,
+                112, 78, 118, 64, 77, 227, 93, 88, 69, 60,
+                34, 30, 73, 54, 45, 83, 182, 88, 75, 85,
+                54, 53, 89, 59, 37, 35, 38, 29, 18, 45,
+                60, 49, 62, 55, 78, 96, 29, 22, 24, 13,
+                14, 11, 11, 18, 12, 12, 30, 52, 52, 44,
+                28, 28, 20, 56, 40, 31, 50, 40, 46, 42,
+                29, 19, 5, 8, 8, 11, 8, 11, 11, 8,
+                3, 9, 8, 3, 8, 8, 3, 3, 8, 8,
+                3, 3, 3, 5, 5, 3, 4, 5, 5, 1,
+                5, 4, 3, 6, 3, 3, 7, 3, 6, 3
+            ];
+            let total = 0;
+            for (let i = 0; i < surah - 1; i++) {
+                total += ayahCounts[i];
+            }
+            return total + ayah;
+        }
+        
         const surahNames = [
             "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس",
             "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه",
@@ -921,7 +969,7 @@ function getHTML() {
                 const reciter = reciterSelect.value;
                 const translation = translationSelect.value;
                 
-                audio.src = 'https://cdn.islamic.network/quran/audio/128/' + reciter + '/' + currentSurah + String(currentAyah).padStart(3, '0') + '.mp3';
+                audio.src = 'https://cdn.islamic.network/quran/audio/128/' + reciter + '/' + getGlobalVerseNumber(currentSurah, currentAyah) + '.mp3';
                 
                 const response = await fetch('/api/ayah?surah=' + currentSurah + '&ayah=' + currentAyah + '&translation=' + translation);
                 const data = await response.json();
@@ -1056,7 +1104,7 @@ function getHTML() {
         
         reciterSelect.addEventListener('change', () => {
             const reciter = reciterSelect.value;
-            audio.src = 'https://cdn.islamic.network/quran/audio/128/' + reciter + '/' + currentSurah + String(currentAyah).padStart(3, '0') + '.mp3';
+            audio.src = 'https://cdn.islamic.network/quran/audio/128/' + reciter + '/' + getGlobalVerseNumber(currentSurah, currentAyah) + '.mp3';
             if (isPlaying) audio.play();
         });
         
