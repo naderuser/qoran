@@ -1,0 +1,10 @@
+name = "quran-audio-player"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[site]
+bucket = "./"
+
+# For production deployment
+# [vars]
+# YOUR_VARIABLE = "value"
