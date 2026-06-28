@@ -190,20 +190,9 @@ async function getAyah(surah, ayah, reciter, translation) {
     const transRes = await fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/${translation}`);
     const transData = await transRes.json();
 
-    // Handle different API response formats
-    let arabicText = '';
-    if (arabicData.data) {
-      arabicText = arabicData.data.text || '';
-    } else if (arabicData.data?.surah?.ayahs) {
-      // Full surah response format
-      const targetAyah = arabicData.data.surah.ayahs.find(a => a.numberInSurah === parseInt(ayah));
-      if (targetAyah) arabicText = targetAyah.text || '';
-    }
-    
-    let translationText = '';
-    if (transData.data) {
-      translationText = transData.data.text || '';
-    }
+    // Extract text from API response
+    const arabicText = arabicData.data?.text || '';
+    const translationText = transData.data?.text || '';
 
     const result = {
       surah: parseInt(surah),
@@ -797,6 +786,22 @@ function getHTML() {
             5, 4, 3, 6, 3, 3, 7, 3, 6, 3
         ];
         
+        // Fallback Arabic text data for common ayahs (quran-simple format)
+        const fallbackArabicText = {
+            "1:1": "بِسْمِ اللَّهِ الرَّحْمٰنِ الرَّحِيمِ",
+            "1:2": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+            "1:3": "الرَّحْمٰنِ الرَّحِيمِ",
+            "1:4": "مَالِكِ يَوْمِ الدِّينِ",
+            "1:5": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+            "1:6": "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ",
+            "1:7": "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ"
+        };
+        
+        function getFallbackText(surah, ayah) {
+            const key = surah + ":" + ayah;
+            return fallbackArabicText[key] || "";
+        }
+        
         let currentSurah = 1;
         let currentAyah = 1;
         let totalAyahs = 7;
@@ -889,13 +894,31 @@ function getHTML() {
             
             try {
                 // Fetch from API with quran-simple edition (no diacritics, matches audio)
-                const response = await fetch('/api/ayah?surah=' + currentSurah + '&ayah=' + currentAyah + '&translation=' + translation);
+                const apiUrl = '/api/ayah?surah=' + currentSurah + '&ayah=' + currentAyah + '&translation=' + translation;
+                console.log('Fetching:', apiUrl);
+                
+                const response = await fetch(apiUrl);
                 const data = await response.json();
                 
-                if (data.arabic) arabicText.textContent = data.arabic;
+                console.log('API Response:', JSON.stringify(data));
+                
+                // Use API text or fallback
+                if (data.arabic) {
+                    arabicText.textContent = data.arabic;
+                    console.log('Set Arabic:', data.arabic);
+                } else {
+                    // Try fallback
+                    const fallback = getFallbackText(currentSurah, currentAyah);
+                    arabicText.textContent = fallback || '...';
+                    console.log('Using fallback:', fallback);
+                }
+                
                 if (data.translation) translationText.textContent = data.translation;
             } catch (error) {
                 console.error('Error loading ayah:', error);
+                // Try fallback on error
+                const fallback = getFallbackText(currentSurah, currentAyah);
+                if (fallback) arabicText.textContent = fallback;
             }
             
             // Auto-play if coming from previous ayah ended
