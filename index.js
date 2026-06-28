@@ -788,6 +788,7 @@ function getHTML() {
         let currentAyah = 1;
         let totalAyahs = 7;
         let isPlaying = false;
+        let shouldAutoPlay = false;
         let audio = new Audio();
         
         const surahSelect = document.getElementById('surahSelect');
@@ -884,6 +885,15 @@ function getHTML() {
                 console.error('Error loading ayah:', error);
             }
             
+            // Auto-play if coming from previous ayah ended
+            if (shouldAutoPlay) {
+                audio.play().then(() => {
+                    isPlaying = true;
+                    playBtn.textContent = '⏸';
+                }).catch(e => console.error('Auto-play failed:', e));
+                shouldAutoPlay = false;
+            }
+            
             updateNavButtons();
             showLoading(false);
         }
@@ -916,29 +926,29 @@ function getHTML() {
         function prevAyah() {
             if (currentAyah > 1) {
                 currentAyah--;
+                shouldAutoPlay = isPlaying;
                 loadAyah();
-                if (isPlaying) audio.play();
             }
         }
         
         function nextAyah() {
             if (currentAyah < totalAyahs) {
                 currentAyah++;
+                shouldAutoPlay = isPlaying;
                 loadAyah();
-                if (isPlaying) audio.play();
             }
         }
         
         function prev10Ayahs() {
             currentAyah = Math.max(1, currentAyah - 10);
+            shouldAutoPlay = isPlaying;
             loadAyah();
-            if (isPlaying) audio.play();
         }
         
         function next10Ayahs() {
             currentAyah = Math.min(totalAyahs, currentAyah + 10);
+            shouldAutoPlay = isPlaying;
             loadAyah();
-            if (isPlaying) audio.play();
         }
         
         function prevSurah() {
@@ -946,6 +956,7 @@ function getHTML() {
                 currentSurah--;
                 currentAyah = 1;
                 surahSelect.value = currentSurah;
+                shouldAutoPlay = isPlaying;
                 loadAyah();
             }
         }
@@ -955,6 +966,7 @@ function getHTML() {
                 currentSurah++;
                 currentAyah = 1;
                 surahSelect.value = currentSurah;
+                shouldAutoPlay = isPlaying;
                 loadAyah();
             }
         }
@@ -972,12 +984,14 @@ function getHTML() {
         });
         
         audio.addEventListener('ended', () => {
+            isPlaying = false;
             if (currentAyah < totalAyahs) {
+                shouldAutoPlay = true;
                 nextAyah();
             } else if (currentSurah < 114) {
+                shouldAutoPlay = true;
                 nextSurah();
             } else {
-                isPlaying = false;
                 playBtn.textContent = '▶';
                 showToast('پایان قرآن کریم');
             }
